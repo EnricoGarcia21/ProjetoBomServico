@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Meus Anúncios - BomServiço</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Poppins:wght@600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <nav class="navbar">
+        <div class="container navbar-container">
+            <a href="index.html" class="navbar-brand"><i class="fas fa-handshake"></i> BomServiço</a>
+            <ul class="navbar-menu"></ul>
+        </div>
+    </nav>
+
+    <section style="padding: var(--spacing-3xl) 0;">
+        <div class="container">
+            <div class="d-flex justify-between items-center mb-3">
+                <h1 style="color: white;"><i class="fas fa-list"></i> Meus Anúncios</h1>
+                <a href="cadastro-anuncio.html" class="btn btn-primary btn-lg">
+                    <i class="fas fa-plus"></i> Novo Anúncio
+                </a>
+            </div>
+
+            <div class="grid grid-cols-2" id="anunciosList">
+                <div class="spinner" style="margin: var(--spacing-3xl) auto;"></div>
+            </div>
+        </div>
+    </section>
+
+    <script src="js/utils.js"></script>
+    <script src="js/auth.js"></script>
+    <script src="js/api.js"></script>
+    <script>
+        Auth.requirePrestador();
+
+        async function loadAnuncios() {
+            try {
+                const anuncios = await API.getMyAnuncios();
+                const list = document.getElementById('anunciosList');
+
+                if (anuncios.length === 0) {
+                    list.innerHTML = '<div class="empty-state"><p class="empty-state-text">Você ainda não possui anúncios</p></div>';
+                } else {
+                    list.innerHTML = anuncios.map(anuncio => `
+                        <div class="card card-glass">
+                            <div class="card-body">
+                                <h4>${anuncio.titulo}</h4>
+                                <p class="text-gray">${truncate(anuncio.descr || '', 100)}</p>
+                                <div class="d-flex flex-wrap gap-1 mb-2">
+                                    ${anuncio.categoriaList ? anuncio.categoriaList.map(cat => `
+                                        <span class="badge badge-primary">${cat.nome}</span>
+                                    `).join('') : ''}
+                                </div>
+                                <div class="d-flex gap-1">
+                                    <a href="cadastro-anuncio.html?id=${anuncio.id}" class="btn btn-primary btn-sm"><i class="fas fa-edit"></i> Editar</a>
+                                    <button class="btn btn-danger btn-sm" onclick="deleteAnuncio(${anuncio.id})"><i class="fas fa-trash"></i> Excluir</button>
+                                </div>
+                            </div>
+                        </div>
+                    `).join('');
+                }
+            } catch (error) {
+                showToast('Erro ao carregar anúncios', 'error');
+            }
+        }
+
+        async function deleteAnuncio(id) {
+            if (await confirm('Deseja realmente excluir este anúncio?')) {
+                try {
+                    await API.deleteAnuncio(id);
+                    showToast('Anúncio excluído', 'success');
+                    loadAnuncios();
+                } catch (error) {
+                    showToast('Erro ao excluir anúncio', 'error');
+                }
+            }
+        }
+
+        loadAnuncios();
+    </script>
+</body>
+</html>

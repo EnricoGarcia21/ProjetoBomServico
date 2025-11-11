@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Dashboard - BomServiço</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Poppins:wght@600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <nav class="navbar">
+        <div class="container navbar-container">
+            <a href="index.html" class="navbar-brand"><i class="fas fa-handshake"></i> BomServiço</a>
+            <ul class="navbar-menu"></ul>
+        </div>
+    </nav>
+
+    <section style="padding: var(--spacing-3xl) 0;">
+        <div class="container">
+            <h1 style="color: white; margin-bottom: var(--spacing-2xl);"><i class="fas fa-shield-alt"></i> Painel Administrativo</h1>
+
+            <!-- Categorias Section -->
+            <div class="card card-glass mb-3">
+                <div class="card-header d-flex justify-between items-center">
+                    <h3><i class="fas fa-tags"></i> Gerenciar Categorias</h3>
+                    <button class="btn btn-primary" onclick="showModal('categoriaModal')"><i class="fas fa-plus"></i> Nova Categoria</button>
+                </div>
+                <div class="card-body">
+                    <div class="grid grid-cols-4" id="categoriasList"></div>
+                </div>
+            </div>
+
+            <!-- Anuncios Section -->
+            <div class="card card-glass">
+                <div class="card-header">
+                    <h3><i class="fas fa-list"></i> Todos os Anúncios</h3>
+                </div>
+                <div class="card-body">
+                    <div class="grid grid-cols-3" id="anunciosList"></div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Modal Nova Categoria -->
+    <div id="categoriaModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h4><i class="fas fa-plus"></i> <span id="modalTitle">Nova Categoria</span></h4>
+            </div>
+            <div class="modal-body">
+                <form id="categoriaForm">
+                    <div class="form-group">
+                        <label class="form-label">Nome da Categoria</label>
+                        <input type="text" id="categoriaNome" class="form-control" required>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-outline" onclick="hideModal('categoriaModal')">Cancelar</button>
+                <button class="btn btn-primary" onclick="saveCategoria()"><i class="fas fa-save"></i> Salvar</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="js/utils.js"></script>
+    <script src="js/auth.js"></script>
+    <script src="js/api.js"></script>
+    <script>
+        Auth.requireAdmin();
+
+        let editingCategoriaId = null;
+
+        async function loadCategorias() {
+            try {
+                const categorias = await API.getAllCategorias();
+                document.getElementById('categoriasList').innerHTML = categorias.map(cat => `
+                    <div class="card">
+                        <div class="card-body text-center">
+                            <h5>${cat.nome}</h5>
+                            <div class="d-flex gap-1 justify-center mt-2">
+                                <button class="btn btn-sm btn-primary" onclick="editCategoria(${cat.id}, '${cat.nome}')"><i class="fas fa-edit"></i></button>
+                                <button class="btn btn-sm btn-danger" onclick="deleteCategoria(${cat.id})"><i class="fas fa-trash"></i></button>
+                            </div>
+                        </div>
+                    </div>
+                `).join('');
+            } catch (error) {
+                showToast('Erro ao carregar categorias', 'error');
+            }
+        }
+
+        async function loadAnuncios() {
+            try {
+                const anuncios = await API.getAllAnunciosAdmin();
+                document.getElementById('anunciosList').innerHTML = anuncios.map(anuncio => `
+                    <div class="card">
+                        <div class="card-body">
+                            <h5>${anuncio.titulo}</h5>
+                            <p class="text-gray">${truncate(anuncio.descr || '', 80)}</p>
+                            <button class="btn btn-sm btn-danger btn-block" onclick="deleteAnuncio(${anuncio.id})">
+                                <i class="fas fa-trash"></i> Excluir
+                            </button>
+                        </div>
+                    </div>
+                `).join('');
+            } catch (error) {
+                showToast('Erro ao carregar anúncios', 'error');
+            }
+        }
+
+        function editCategoria(id, nome) {
+            editingCategoriaId = id;
+            document.getElementById('modalTitle').textContent = 'Editar Categoria';
+            document.getElementById('categoriaNome').value = nome;
+            showModal('categoriaModal');
+        }
+
+        async function saveCategoria() {
+            const nome = document.getElementById('categoriaNome').value;
+            if (!nome) return;
+
+            try {
+                if (editingCategoriaId) {
+                    await API.updateCategoria({ id: editingCategoriaId, nome });
+                    showToast('Categoria atualizada!', 'success');
+                } else {
+                    await API.createCategoria({ nome });
+                    showToast('Categoria criada!', 'success');
+                }
+                hideModal('categoriaModal');
+                editingCategoriaId = null;
+                document.getElementById('categoriaForm').reset();
+                loadCategorias();
+            } catch (error) {
+                showToast('Erro ao salvar categoria', 'error');
+            }
+        }
+
+        async function deleteCategoria(id) {
+            if (await confirm('Deseja realmente excluir esta categoria?')) {
+                try {
+                    await API.deleteCategoria(id);
+                    showToast('Categoria excluída', 'success');
+                    loadCategorias();
+                } catch (error) {
+                    showToast('Erro ao excluir categoria', 'error');
+                }
+            }
+        }
+
+        async function deleteAnuncio(id) {
+            if (await confirm('Deseja realmente excluir este anúncio?')) {
+                try {
+                    await API.deleteAnuncioAdmin(id);
+                    showToast('Anúncio excluído', 'success');
+                    loadAnuncios();
+                } catch (error) {
+                    showToast('Erro ao excluir anúncio', 'error');
+                }
+            }
+        }
+
+        loadCategorias();
+        loadAnuncios();
+    </script>
+</body>
+</html>

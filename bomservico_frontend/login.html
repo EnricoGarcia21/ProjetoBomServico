@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login - BomServiço</title>
+
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Poppins:wght@600;700;800&display=swap" rel="stylesheet">
+
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <!-- Navbar -->
+    <nav class="navbar">
+        <div class="container navbar-container">
+            <a href="index.html" class="navbar-brand">
+                <i class="fas fa-handshake"></i> BomServiço
+            </a>
+            <ul class="navbar-menu">
+                <li><a href="index.html" class="navbar-link">Início</a></li>
+                <li><a href="cadastro-prestador.html" class="navbar-link">Cadastre-se</a></li>
+            </ul>
+        </div>
+    </nav>
+
+    <!-- Login Section -->
+    <section style="padding: var(--spacing-3xl) 0; min-height: 80vh; display: flex; align-items: center;">
+        <div class="container">
+            <div class="card card-glass fade-in" style="max-width: 500px; margin: 0 auto;">
+                <div class="card-header text-center">
+                    <h2><i class="fas fa-sign-in-alt"></i> Entrar</h2>
+                    <p class="text-gray">Acesse sua conta do BomServiço</p>
+                </div>
+                <div class="card-body">
+                    <form id="loginForm">
+                        <div class="form-group">
+                            <label class="form-label">
+                                <i class="fas fa-user"></i> Login
+                            </label>
+                            <input
+                                type="text"
+                                id="login"
+                                class="form-control"
+                                placeholder="Digite seu login"
+                                required
+                            >
+                            <span class="form-error">Login é obrigatório</span>
+                        </div>
+
+                        <div class="form-group">
+                            <label class="form-label">
+                                <i class="fas fa-lock"></i> Senha
+                            </label>
+                            <input
+                                type="password"
+                                id="senha"
+                                class="form-control"
+                                placeholder="Digite sua senha"
+                                required
+                            >
+                            <span class="form-error">Senha é obrigatória</span>
+                        </div>
+
+                        <button type="submit" class="btn btn-primary btn-block btn-lg">
+                            <i class="fas fa-sign-in-alt"></i> Entrar
+                        </button>
+                    </form>
+
+                    <div style="text-align: center; margin-top: var(--spacing-lg); padding-top: var(--spacing-lg); border-top: 1px solid var(--gray-200);">
+                        <p class="text-gray">Ainda não tem uma conta?</p>
+                        <a href="cadastro-prestador.html" class="btn btn-outline" style="margin-top: var(--spacing-md);">
+                            <i class="fas fa-user-plus"></i> Cadastrar como Prestador
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer style="background: rgba(0, 0, 0, 0.2); padding: var(--spacing-2xl) 0; color: white; text-align: center;">
+        <div class="container">
+            <p>&copy; 2025 BomServiço. Todos os direitos reservados.</p>
+        </div>
+    </footer>
+
+    <!-- Scripts -->
+    <script src="js/utils.js"></script>
+    <script src="js/auth.js"></script>
+    <script src="js/api.js"></script>
+    <script>
+        // Redirect if already logged in
+        if (Auth.isAuthenticated()) {
+            if (Auth.isAdmin()) {
+                window.location.href = 'admin-dashboard.html';
+            } else {
+                window.location.href = 'prestador-dashboard.html';
+            }
+        }
+
+        document.getElementById('loginForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            const login = document.getElementById('login').value;
+            const senha = document.getElementById('senha').value;
+
+            if (!login || !senha) {
+                showToast('Preencha todos os campos', 'error');
+                return;
+            }
+
+            try {
+                const response = await API.login({ login, senha });
+
+                // Save auth data
+                Auth.login(response);
+
+                showToast('Login realizado com sucesso!', 'success');
+
+                // Redirect based on user role
+                setTimeout(() => {
+                    if (response.nivel === 1) {
+                        window.location.href = 'admin-dashboard.html';
+                    } else {
+                        window.location.href = 'prestador-dashboard.html';
+                    }
+                }, 1000);
+
+            } catch (error) {
+                showToast(error.message || 'Erro ao fazer login', 'error');
+            }
+        });
+    </script>
+</body>
+</html>

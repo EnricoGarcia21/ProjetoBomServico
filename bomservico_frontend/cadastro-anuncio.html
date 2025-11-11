@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cadastro de Anúncio - BomServiço</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Poppins:wght@600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <nav class="navbar">
+        <div class="container navbar-container">
+            <a href="index.html" class="navbar-brand"><i class="fas fa-handshake"></i> BomServiço</a>
+            <ul class="navbar-menu"></ul>
+        </div>
+    </nav>
+
+    <section style="padding: var(--spacing-3xl) 0;">
+        <div class="container">
+            <div class="card card-glass fade-in" style="max-width: 800px; margin: 0 auto;">
+                <div class="card-header">
+                    <h2><i class="fas fa-plus-circle"></i> <span id="formTitle">Novo Anúncio</span></h2>
+                </div>
+                <div class="card-body">
+                    <form id="anuncioForm">
+                        <div class="form-group">
+                            <label class="form-label"><i class="fas fa-heading"></i> Título *</label>
+                            <input type="text" id="titulo" class="form-control" placeholder="Ex: Serviços de Encanador" required>
+                        </div>
+
+                        <div class="form-group">
+                            <label class="form-label"><i class="fas fa-align-left"></i> Descrição *</label>
+                            <textarea id="descr" class="form-control" rows="4" placeholder="Descreva seus serviços" required></textarea>
+                        </div>
+
+                        <div class="form-group">
+                            <label class="form-label"><i class="fas fa-tags"></i> Categorias</label>
+                            <div id="categoriasList" class="d-flex flex-wrap gap-1"></div>
+                        </div>
+
+                        <div class="form-group">
+                            <label class="form-label"><i class="fas fa-calendar"></i> Dias de Trabalho *</label>
+                            <input type="text" id="diasTrab" class="form-control" placeholder="Ex: Segunda - Sexta" required>
+                        </div>
+
+                        <div class="grid grid-cols-2">
+                            <div class="form-group">
+                                <label class="form-label"><i class="fas fa-clock"></i> Horário Início *</label>
+                                <input type="time" id="horarioInicioDia" class="form-control" required>
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label"><i class="fas fa-clock"></i> Horário Fim *</label>
+                                <input type="time" id="horarioFimDia" class="form-control" required>
+                            </div>
+                        </div>
+
+                        <div class="d-flex gap-2">
+                            <button type="submit" class="btn btn-primary btn-lg"><i class="fas fa-save"></i> Salvar</button>
+                            <a href="meus-anuncios.html" class="btn btn-outline btn-lg">Cancelar</a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <script src="js/utils.js"></script>
+    <script src="js/auth.js"></script>
+    <script src="js/api.js"></script>
+    <script>
+        Auth.requirePrestador();
+
+        const anuncioId = getUrlParameter('id');
+        const isEdit = !!anuncioId;
+        let categorias = [];
+        let selectedCategorias = [];
+
+        if (isEdit) {
+            document.getElementById('formTitle').textContent = 'Editar Anúncio';
+        }
+
+        async function loadCategorias() {
+            try {
+                categorias = await API.getCategorias();
+                renderCategorias();
+            } catch (error) {
+                showToast('Erro ao carregar categorias', 'error');
+            }
+        }
+
+        function renderCategorias() {
+            const list = document.getElementById('categoriasList');
+            list.innerHTML = categorias.map(cat => `
+                <label class="badge ${selectedCategorias.includes(cat.id) ? 'badge-primary' : ''}" style="cursor: pointer;">
+                    <input type="checkbox" value="${cat.id}" ${selectedCategorias.includes(cat.id) ? 'checked' : ''} style="display: none;">
+                    ${cat.nome}
+                </label>
+            `).join('');
+
+            list.querySelectorAll('label').forEach(label => {
+                label.onclick = () => {
+                    const checkbox = label.querySelector('input');
+                    checkbox.checked = !checkbox.checked;
+                    label.classList.toggle('badge-primary');
+                };
+            });
+        }
+
+        async function loadAnuncio() {
+            if (!isEdit) return;
+
+            try {
+                const anuncio = await API.getMyAnuncio(anuncioId);
+                document.getElementById('titulo').value = anuncio.titulo;
+                document.getElementById('descr').value = anuncio.descr || '';
+                document.getElementById('diasTrab').value = anuncio.diasTrab;
+                document.getElementById('horarioInicioDia').value = anuncio.horarioInicioDia;
+                document.getElementById('horarioFimDia').value = anuncio.horarioFimDia;
+                selectedCategorias = anuncio.categoriaList ? anuncio.categoriaList.map(c => c.id) : [];
+                renderCategorias();
+            } catch (error) {
+                showToast('Erro ao carregar anúncio', 'error');
+            }
+        }
+
+        document.getElementById('anuncioForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            const categoriaList = Array.from(document.querySelectorAll('#categoriasList input:checked'))
+                .map(input => ({ id: parseInt(input.value) }));
+
+            const anuncioData = {
+                titulo: document.getElementById('titulo').value,
+                descr: document.getElementById('descr').value,
+                diasTrab: document.getElementById('diasTrab').value,
+                horarioInicioDia: document.getElementById('horarioInicioDia').value,
+                horarioFimDia: document.getElementById('horarioFimDia').value,
+                categoriaList
+            };
+
+            try {
+                if (isEdit) {
+                    anuncioData.id = parseInt(anuncioId);
+                    await API.updateAnuncio(anuncioData);
+                    showToast('Anúncio atualizado!', 'success');
+                } else {
+                    await API.createAnuncio(anuncioData);
+                    showToast('Anúncio criado!', 'success');
+                }
+                setTimeout(() => window.location.href = 'meus-anuncios.html', 1500);
+            } catch (error) {
+                showToast(error.message || 'Erro ao salvar anúncio', 'error');
+            }
+        });
+
+        loadCategorias().then(() => loadAnuncio());
+    </script>
+</body>
+</html>

@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Detalhes do Anúncio - BomServiço</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Poppins:wght@600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <nav class="navbar">
+        <div class="container navbar-container">
+            <a href="index.html" class="navbar-brand"><i class="fas fa-handshake"></i> BomServiço</a>
+            <ul class="navbar-menu"></ul>
+        </div>
+    </nav>
+
+    <section style="padding: var(--spacing-3xl) 0;">
+        <div class="container">
+            <div class="card card-glass fade-in">
+                <div class="card-body" id="anuncioDetails">
+                    <div class="spinner" style="margin: var(--spacing-3xl) auto;"></div>
+                </div>
+            </div>
+
+            <div class="card card-glass mt-3" id="interesseForm">
+                <div class="card-header">
+                    <h3><i class="fas fa-envelope"></i> Entrar em Contato</h3>
+                </div>
+                <div class="card-body">
+                    <form id="contactForm">
+                        <div class="grid grid-cols-2">
+                            <div class="form-group">
+                                <label class="form-label">Nome *</label>
+                                <input type="text" id="nome" class="form-control" required>
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Telefone *</label>
+                                <input type="text" id="fone" class="form-control" required>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Email *</label>
+                            <input type="email" id="email" class="form-control" required>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Mensagem *</label>
+                            <textarea id="mensagem" class="form-control" rows="4" required></textarea>
+                        </div>
+                        <button type="submit" class="btn btn-primary btn-lg"><i class="fas fa-paper-plane"></i> Enviar Mensagem</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <script src="js/utils.js"></script>
+    <script src="js/auth.js"></script>
+    <script src="js/api.js"></script>
+    <script>
+        const anuncioId = getUrlParameter('id');
+
+        async function loadAnuncio() {
+            try {
+                const anuncio = await API.getAnuncioPublic(anuncioId);
+                document.getElementById('anuncioDetails').innerHTML = `
+                    <h1>${anuncio.titulo}</h1>
+                    <p class="text-gray mb-2">${anuncio.descr || 'Sem descrição'}</p>
+                    <div class="d-flex flex-wrap gap-1 mb-2">
+                        ${anuncio.categoriaList ? anuncio.categoriaList.map(cat => `
+                            <span class="badge badge-primary"><i class="fas fa-${getCategoriaIcon(cat.nome)}"></i> ${cat.nome}</span>
+                        `).join('') : ''}
+                    </div>
+                    <div class="grid grid-cols-2 mt-3">
+                        <div><i class="fas fa-calendar"></i> <strong>Dias:</strong> ${anuncio.diasTrab}</div>
+                        <div><i class="fas fa-clock"></i> <strong>Horário:</strong> ${anuncio.horarioInicioDia} - ${anuncio.horarioFimDia}</div>
+                        <div><i class="fas fa-user"></i> <strong>Prestador:</strong> ${anuncio.usuario?.nome || 'N/A'}</div>
+                        <div><i class="fas fa-phone"></i> <strong>Telefone:</strong> ${anuncio.usuario?.telefone || 'N/A'}</div>
+                    </div>
+                `;
+            } catch (error) {
+                showToast('Erro ao carregar anúncio', 'error');
+            }
+        }
+
+        document.getElementById('contactForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            try {
+                await API.sendInteresse(anuncioId, {
+                    nome: document.getElementById('nome').value,
+                    fone: document.getElementById('fone').value,
+                    email: document.getElementById('email').value,
+                    mensagem: document.getElementById('mensagem').value
+                });
+                showToast('Mensagem enviada com sucesso!', 'success');
+                document.getElementById('contactForm').reset();
+            } catch (error) {
+                showToast(error.message || 'Erro ao enviar mensagem', 'error');
+            }
+        });
+
+        loadAnuncio();
+    </script>
+</body>
+</html>

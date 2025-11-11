@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BomServiço - Encontre os Melhores Profissionais</title>
+
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Poppins:wght@600;700;800&display=swap" rel="stylesheet">
+
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <!-- Navbar -->
+    <nav class="navbar">
+        <div class="container navbar-container">
+            <a href="index.html" class="navbar-brand">
+                <i class="fas fa-handshake"></i> BomServiço
+            </a>
+            <ul class="navbar-menu">
+                <!-- Will be populated by auth.js -->
+            </ul>
+        </div>
+    </nav>
+
+    <!-- Hero Section -->
+    <section class="hero">
+        <div class="container">
+            <h1 class="hero-title fade-in">
+                Encontre Profissionais<br>de <span class="text-secondary">Confiança</span>
+            </h1>
+            <p class="hero-subtitle slide-up">
+                Conectamos você aos melhores prestadores de serviços da sua região
+            </p>
+
+            <!-- Search Bar -->
+            <div class="card card-glass" style="max-width: 700px; margin: 0 auto;">
+                <div class="card-body">
+                    <form id="searchForm" class="d-flex gap-2">
+                        <input
+                            type="text"
+                            id="searchInput"
+                            class="form-control"
+                            placeholder="Buscar serviços (ex: encanador, eletricista, pintor...)"
+                            style="flex: 1;"
+                        >
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-search"></i> Buscar
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Categories Section -->
+    <section style="padding: var(--spacing-3xl) 0; background: rgba(255, 255, 255, 0.1);">
+        <div class="container">
+            <h2 class="text-center" style="color: white; margin-bottom: var(--spacing-2xl);">
+                <i class="fas fa-th-large"></i> Categorias Populares
+            </h2>
+            <div class="grid grid-cols-4" id="categoriesGrid">
+                <!-- Categories will be loaded here -->
+            </div>
+        </div>
+    </section>
+
+    <!-- Ads Section -->
+    <section style="padding: var(--spacing-3xl) 0;">
+        <div class="container">
+            <div class="d-flex justify-between items-center mb-3">
+                <h2 style="color: white;">
+                    <i class="fas fa-star"></i> Serviços em Destaque
+                </h2>
+                <div class="d-flex gap-2" id="categoryFilters">
+                    <!-- Category filters will be loaded here -->
+                </div>
+            </div>
+
+            <div class="grid grid-cols-3" id="anunciosGrid">
+                <!-- Ads will be loaded here -->
+            </div>
+
+            <!-- Empty State -->
+            <div id="emptyState" class="empty-state d-none">
+                <div class="empty-state-icon">
+                    <i class="fas fa-search"></i>
+                </div>
+                <h3 class="empty-state-title">Nenhum serviço encontrado</h3>
+                <p class="empty-state-text">Tente buscar por outros termos ou categorias</p>
+            </div>
+        </div>
+    </section>
+
+    <!-- CTA Section -->
+    <section style="padding: var(--spacing-3xl) 0; background: rgba(255, 255, 255, 0.1);">
+        <div class="container text-center">
+            <h2 style="color: white; margin-bottom: var(--spacing-lg);">
+                Você é um Profissional?
+            </h2>
+            <p style="color: rgba(255, 255, 255, 0.9); font-size: 1.125rem; margin-bottom: var(--spacing-2xl);">
+                Cadastre-se gratuitamente e comece a receber novos clientes hoje mesmo!
+            </p>
+            <a href="cadastro-prestador.html" class="btn btn-secondary btn-lg">
+                <i class="fas fa-user-plus"></i> Cadastrar como Prestador
+            </a>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer style="background: rgba(0, 0, 0, 0.2); padding: var(--spacing-2xl) 0; color: white; text-align: center;">
+        <div class="container">
+            <p>&copy; 2025 BomServiço. Todos os direitos reservados.</p>
+            <p style="margin-top: var(--spacing-md); color: rgba(255, 255, 255, 0.7);">
+                Conectando profissionais e clientes com excelência
+            </p>
+        </div>
+    </footer>
+
+    <!-- Scripts -->
+    <script src="js/utils.js"></script>
+    <script src="js/auth.js"></script>
+    <script src="js/api.js"></script>
+    <script>
+        let allAnuncios = [];
+        let selectedCategory = null;
+
+        // Load categories
+        async function loadCategorias() {
+            try {
+                const categorias = await API.get('/public/anuncio/get-filter', { skipAuth: true })
+                    .then(anuncios => {
+                        // Extract unique categories from anuncios
+                        const cats = new Set();
+                        anuncios.forEach(anuncio => {
+                            if (anuncio.categoriaList) {
+                                anuncio.categoriaList.forEach(cat => cats.add(cat.nome));
+                            }
+                        });
+                        return Array.from(cats).map(nome => ({ nome }));
+                    });
+
+                const categoriesGrid = document.getElementById('categoriesGrid');
+                const categoryFilters = document.getElementById('categoryFilters');
+
+                // Add "All" filter
+                categoryFilters.innerHTML = '<button class="badge badge-primary" onclick="filterByCategory(null)">Todos</button>';
+
+                categorias.forEach(categoria => {
+                    // Category card
+                    const icon = getCategoriaIcon(categoria.nome);
+                    categoriesGrid.innerHTML += `
+                        <div class="card card-glass text-center" style="cursor: pointer;" onclick="filterByCategory('${categoria.nome}')">
+                            <div class="card-body">
+                                <i class="fas fa-${icon}" style="font-size: 2.5rem; color: var(--primary); margin-bottom: var(--spacing-md);"></i>
+                                <h5>${categoria.nome}</h5>
+                            </div>
+                        </div>
+                    `;
+
+                    // Filter badge
+                    categoryFilters.innerHTML += `
+                        <button class="badge" onclick="filterByCategory('${categoria.nome}')">${categoria.nome}</button>
+                    `;
+                });
+            } catch (error) {
+                console.error('Error loading categories:', error);
+            }
+        }
+
+        // Load anuncios
+        async function loadAnuncios(keyword = '') {
+            try {
+                allAnuncios = await API.searchAnuncios(keyword);
+                displayAnuncios();
+            } catch (error) {
+                console.error('Error loading anuncios:', error);
+                showToast('Erro ao carregar anúncios', 'error');
+            }
+        }
+
+        // Display anuncios
+        function displayAnuncios() {
+            const anunciosGrid = document.getElementById('anunciosGrid');
+            const emptyState = document.getElementById('emptyState');
+
+            let filteredAnuncios = allAnuncios;
+
+            // Filter by category
+            if (selectedCategory) {
+                filteredAnuncios = allAnuncios.filter(anuncio =>
+                    anuncio.categoriaList && anuncio.categoriaList.some(cat => cat.nome === selectedCategory)
+                );
+            }
+
+            if (filteredAnuncios.length === 0) {
+                anunciosGrid.innerHTML = '';
+                emptyState.classList.remove('d-none');
+                return;
+            }
+
+            emptyState.classList.add('d-none');
+
+            anunciosGrid.innerHTML = filteredAnuncios.map(anuncio => `
+                <div class="card slide-up" onclick="window.location.href='anuncio-detalhes.html?id=${anuncio.id}'">
+                    <div class="card-body">
+                        <h4 class="card-title">${anuncio.titulo}</h4>
+                        <p class="card-text">${truncate(anuncio.descr || '', 100)}</p>
+                        <div class="d-flex flex-wrap gap-1 mb-2">
+                            ${anuncio.categoriaList ? anuncio.categoriaList.map(cat => `
+                                <span class="badge badge-primary">
+                                    <i class="fas fa-${getCategoriaIcon(cat.nome)}"></i> ${cat.nome}
+                                </span>
+                            `).join('') : ''}
+                        </div>
+                        <div class="d-flex justify-between items-center">
+                            <span class="text-gray">
+                                <i class="fas fa-clock"></i> ${anuncio.horarioInicioDia} - ${anuncio.horarioFimDia}
+                            </span>
+                            <button class="btn btn-sm btn-primary">
+                                Ver Detalhes <i class="fas fa-arrow-right"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        // Filter by category
+        function filterByCategory(category) {
+            selectedCategory = category;
+
+            // Update active filter
+            document.querySelectorAll('#categoryFilters .badge').forEach(badge => {
+                if (category === null && badge.textContent.trim() === 'Todos') {
+                    badge.classList.add('badge-primary');
+                } else if (badge.textContent.trim() === category) {
+                    badge.classList.add('badge-primary');
+                } else {
+                    badge.classList.remove('badge-primary');
+                }
+            });
+
+            displayAnuncios();
+        }
+
+        // Search form
+        document.getElementById('searchForm').addEventListener('submit', (e) => {
+            e.preventDefault();
+            const keyword = document.getElementById('searchInput').value;
+            loadAnuncios(keyword);
+        });
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', () => {
+            loadCategorias();
+            loadAnuncios();
+        });
+    </script>
+</body>
+</html>
