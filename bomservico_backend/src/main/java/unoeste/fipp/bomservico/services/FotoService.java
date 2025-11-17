@@ -57,7 +57,7 @@ public class FotoService {
 
         // Create Foto entity
         Foto foto = new Foto();
-        foto.setNomeArq(filename);
+        foto.setNomeArq(uploadDir + "/" + filename);
         foto.setAnuncio(anuncio);
 
         return fotoRepository.save(foto);

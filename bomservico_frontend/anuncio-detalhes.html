@@ -64,7 +64,26 @@
         async function loadAnuncio() {
             try {
                 const anuncio = await API.getAnuncioPublic(anuncioId);
+
+                // Build photo gallery
+                let photoGallery = '';
+                if (anuncio.fotoList && anuncio.fotoList.length > 0) {
+                    photoGallery = `
+                        <div class="mb-3">
+                            <h3 style="color: white; margin-bottom: var(--spacing-md);"><i class="fas fa-images"></i> Fotos</h3>
+                            <div class="grid grid-cols-3" style="gap: var(--spacing-md);">
+                                ${anuncio.fotoList.map(foto => `
+                                    <img src="http://localhost:8080/${foto.file}" alt="Foto do serviço"
+                                         style="width: 100%; height: 200px; object-fit: cover; border-radius: var(--radius-md); cursor: pointer;"
+                                         onclick="window.open('http://localhost:8080/${foto.file}', '_blank')">
+                                `).join('')}
+                            </div>
+                        </div>
+                    `;
+                }
+
                 document.getElementById('anuncioDetails').innerHTML = `
+                    ${photoGallery}
                     <h1>${anuncio.titulo}</h1>
                     <p class="text-gray mb-2">${anuncio.descr || 'Sem descrição'}</p>
                     <div class="d-flex flex-wrap gap-1 mb-2">

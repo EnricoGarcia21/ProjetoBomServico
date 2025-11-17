@@ -58,4 +58,22 @@ public class UsuarioService {
         }
         return false;
     }
+
+    public Usuario updateUsuarioNivel(String login, int nivel) {
+        Usuario usuario = usuarioRepository.findByLogin(login)
+                .orElseThrow(() -> new RuntimeException("Usuário não encontrado"));
+        usuario.setNivel(nivel);
+        return usuarioRepository.save(usuario);
+    }
+
+    public String hashPassword(String plainPassword) {
+        return passwordEncoder.encode(plainPassword);
+    }
+
+    public Usuario updatePassword(String login, String plainPassword) {
+        Usuario usuario = usuarioRepository.findByLogin(login)
+                .orElseThrow(() -> new RuntimeException("Usuário não encontrado"));
+        usuario.setSenha(passwordEncoder.encode(plainPassword));
+        return usuarioRepository.save(usuario);
+    }
 }

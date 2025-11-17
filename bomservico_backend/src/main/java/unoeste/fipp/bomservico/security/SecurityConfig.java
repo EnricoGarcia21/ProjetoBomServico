@@ -48,6 +48,7 @@ public class SecurityConfig {
                         // Public endpoints
                         .requestMatchers("/apis/public/**").permitAll()
                         .requestMatchers("/error").permitAll()
+                        .requestMatchers("/uploads/**").permitAll()
                         // Prestador endpoints
                         .requestMatchers("/apis/prestador/**").hasRole("PRESTADOR")
                         // Admin endpoints

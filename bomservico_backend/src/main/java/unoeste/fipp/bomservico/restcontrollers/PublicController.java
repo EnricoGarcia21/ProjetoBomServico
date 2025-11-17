@@ -21,7 +21,9 @@ import unoeste.fipp.bomservico.services.AnuncioService;
 import unoeste.fipp.bomservico.services.InteresseService;
 import unoeste.fipp.bomservico.services.UsuarioService;
 
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/apis/public")
@@ -82,6 +84,105 @@ public class PublicController {
         } catch (Exception e) {
             return ResponseEntity.badRequest()
                     .body(new ErrorResponse(400, "Bad Request", e.getMessage(), "/apis/public/add-user"));
+        }
+    }
+
+    /**
+     * GET /apis/public/check-user/{login} - Check user nivel (for debugging)
+     */
+    @GetMapping("/check-user/{login}")
+    public ResponseEntity<?> checkUserNivel(@PathVariable String login) {
+        try {
+            Usuario usuario = usuarioService.getUsuarioByLogin(login)
+                    .orElseThrow(() -> new RuntimeException("Usuário não encontrado"));
+            return ResponseEntity.ok(Map.of(
+                    "login", usuario.getLogin(),
+                    "nome", usuario.getNome(),
+                    "nivel", usuario.getNivel(),
+                    "role", usuario.getNivel() == 1 ? "ADMIN" : "PRESTADOR"
+            ));
+        } catch (Exception e) {
+            return ResponseEntity.badRequest()
+                    .body(new ErrorResponse(400, "Bad Request", e.getMessage(), "/apis/public/check-user/" + login));
+        }
+    }
+
+    /**
+     * PUT /apis/public/fix-user-nivel/{login} - Fix user nivel to prestador (for debugging)
+     */
+    @PutMapping("/fix-user-nivel/{login}")
+    public ResponseEntity<?> fixUserNivel(@PathVariable String login) {
+        try {
+            Usuario usuario = usuarioService.getUsuarioByLogin(login)
+                    .orElseThrow(() -> new RuntimeException("Usuário não encontrado"));
+            usuario.setNivel(0); // Set to PRESTADOR
+            usuarioService.updateUsuarioNivel(login, 0);
+            return ResponseEntity.ok(Map.of(
+                    "message", "User nivel updated successfully",
+                    "login", usuario.getLogin(),
+                    "newNivel", 0,
+                    "role", "PRESTADOR"
+            ));
+        } catch (Exception e) {
+            return ResponseEntity.badRequest()
+                    .body(new ErrorResponse(400, "Bad Request", e.getMessage(), "/apis/public/fix-user-nivel/" + login));
+        }
+    }
+
+    /**
+     * POST /apis/public/hash-password - Generate BCrypt hash for password (for debugging)
+     */
+    @PostMapping("/hash-password")
+    public ResponseEntity<?> hashPassword(@RequestBody Map<String, String> request) {
+        try {
+            String password = request.get("password");
+            if (password == null || password.isEmpty()) {
+                throw new RuntimeException("Password is required");
+            }
+            String hash = usuarioService.hashPassword(password);
+            return ResponseEntity.ok(Map.of(
+                    "password", password,
+                    "hash", hash,
+                    "length", hash.length()
+            ));
+        } catch (Exception e) {
+            return ResponseEntity.badRequest()
+                    .body(new ErrorResponse(400, "Bad Request", e.getMessage(), "/apis/public/hash-password"));
+        }
+    }
+
+    /**
+     * POST /apis/public/fix-all-passwords - Fix all user passwords (for debugging)
+     */
+    @PostMapping("/fix-all-passwords")
+    public ResponseEntity<?> fixAllPasswords() {
+        try {
+            Map<String, String> defaultPasswords = Map.of(
+                    "jorge", "123",
+                    "admin", "admin",
+                    "eddy", "eddy123",
+                    "evandro", "evandro"
+            );
+
+            List<String> updated = new ArrayList<>();
+            for (Map.Entry<String, String> entry : defaultPasswords.entrySet()) {
+                String login = entry.getKey();
+                String password = entry.getValue();
+                try {
+                    usuarioService.updatePassword(login, password);
+                    updated.add(login);
+                } catch (Exception e) {
+                    // User might not exist, skip
+                }
+            }
+
+            return ResponseEntity.ok(Map.of(
+                    "message", "Passwords updated successfully",
+                    "updated", updated
+            ));
+        } catch (Exception e) {
+            return ResponseEntity.badRequest()
+                    .body(new ErrorResponse(400, "Bad Request", e.getMessage(), "/apis/public/fix-all-passwords"));
         }
     }
 

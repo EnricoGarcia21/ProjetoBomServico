@@ -1,5 +1,7 @@
 package unoeste.fipp.bomservico.entities;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import jakarta.persistence.*;
 
 @Entity
@@ -12,10 +14,12 @@ public class Foto {
     private Long id;
 
     @Column(name = "fot_file")
+    @JsonProperty("file")
     private String nomeArq;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name="anu_id")
+    @JsonIgnore
     private Anuncio anuncio;
 
     public Foto(Long id, String nomeArq) {

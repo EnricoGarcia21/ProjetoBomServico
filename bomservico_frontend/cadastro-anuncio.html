@@ -60,6 +60,21 @@
                             <a href="meus-anuncios.html" class="btn btn-outline btn-lg">Cancelar</a>
                         </div>
                     </form>
+
+                    <div id="fotosSection" style="display: none; margin-top: var(--spacing-2xl); padding-top: var(--spacing-2xl); border-top: 1px solid rgba(255,255,255,0.1);">
+                        <h3 style="color: white; margin-bottom: var(--spacing-lg);"><i class="fas fa-images"></i> Fotos do Anúncio</h3>
+
+                        <div class="form-group">
+                            <label class="form-label"><i class="fas fa-upload"></i> Adicionar Fotos (máximo 3)</label>
+                            <input type="file" id="fotoInput" class="form-control" accept="image/*" multiple>
+                            <p class="text-gray" style="font-size: 0.875rem; margin-top: var(--spacing-sm);">
+                                <i class="fas fa-info-circle"></i> Você pode selecionar múltiplas imagens. Máximo 3 fotos por anúncio.
+                            </p>
+                        </div>
+
+                        <div id="fotosList" class="grid grid-cols-3" style="margin-top: var(--spacing-lg);"></div>
+                        <div id="pendingImagesList" class="grid grid-cols-3" style="margin-top: var(--spacing-lg);"></div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -75,9 +90,12 @@
         const isEdit = !!anuncioId;
         let categorias = [];
         let selectedCategorias = [];
+        let fotos = [];
+        let pendingImages = []; // Images selected before anuncio is created
 
         if (isEdit) {
             document.getElementById('formTitle').textContent = 'Editar Anúncio';
+            document.getElementById('fotosSection').style.display = 'block';
         }
 
         async function loadCategorias() {
@@ -92,7 +110,7 @@
         function renderCategorias() {
             const list = document.getElementById('categoriasList');
             list.innerHTML = categorias.map(cat => `
-                <label class="badge ${selectedCategorias.includes(cat.id) ? 'badge-primary' : ''}" style="cursor: pointer;">
+                <label class="badge ${selectedCategorias.includes(cat.id) ? 'badge-primary' : ''}" style="cursor: pointer;" data-cat-id="${cat.id}">
                     <input type="checkbox" value="${cat.id}" ${selectedCategorias.includes(cat.id) ? 'checked' : ''} style="display: none;">
                     ${cat.nome}
                 </label>
@@ -101,14 +119,31 @@
             list.querySelectorAll('label').forEach(label => {
                 label.onclick = () => {
                     const checkbox = label.querySelector('input');
+                    const catId = parseInt(label.dataset.catId);
+
+                    // Toggle checkbox
                     checkbox.checked = !checkbox.checked;
-                    label.classList.toggle('badge-primary');
+
+                    // Update selected categories array
+                    if (checkbox.checked) {
+                        if (!selectedCategorias.includes(catId)) {
+                            selectedCategorias.push(catId);
+                        }
+                        label.classList.add('badge-primary');
+                    } else {
+                        selectedCategorias = selectedCategorias.filter(id => id !== catId);
+                        label.classList.remove('badge-primary');
+                    }
                 };
             });
         }
 
         async function loadAnuncio() {
-            if (!isEdit) return;
+            if (!isEdit) {
+                // Show photo section for new ads too
+                document.getElementById('fotosSection').style.display = 'block';
+                return;
+            }
 
             try {
                 const anuncio = await API.getMyAnuncio(anuncioId);
@@ -118,10 +153,128 @@
                 document.getElementById('horarioInicioDia').value = anuncio.horarioInicioDia;
                 document.getElementById('horarioFimDia').value = anuncio.horarioFimDia;
                 selectedCategorias = anuncio.categoriaList ? anuncio.categoriaList.map(c => c.id) : [];
+                fotos = anuncio.fotoList || [];
                 renderCategorias();
+                renderFotos();
             } catch (error) {
                 showToast('Erro ao carregar anúncio', 'error');
             }
+        }
+
+        function renderFotos() {
+            const list = document.getElementById('fotosList');
+            if (fotos.length === 0) {
+                list.innerHTML = '';
+            } else {
+                list.innerHTML = fotos.map(foto => `
+                    <div class="card" style="position: relative;">
+                        <img src="http://localhost:8080/${foto.file}" alt="Foto" style="width: 100%; height: 150px; object-fit: cover; border-radius: var(--radius-md);">
+                        <button class="btn btn-danger btn-sm" onclick="deleteFoto(${foto.id})" style="position: absolute; top: 5px; right: 5px;">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </div>
+                `).join('');
+            }
+        }
+
+        function renderPendingImages() {
+            const list = document.getElementById('pendingImagesList');
+            if (pendingImages.length === 0) {
+                list.innerHTML = '';
+            } else {
+                list.innerHTML = pendingImages.map((file, index) => `
+                    <div class="card" style="position: relative;">
+                        <img src="${URL.createObjectURL(file)}" alt="Preview" style="width: 100%; height: 150px; object-fit: cover; border-radius: var(--radius-md);">
+                        <button class="btn btn-danger btn-sm" onclick="removePendingImage(${index})" style="position: absolute; top: 5px; right: 5px;">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                        <div style="position: absolute; bottom: 5px; left: 5px; background: rgba(0,0,0,0.7); padding: 2px 8px; border-radius: var(--radius-sm); font-size: 0.75rem;">
+                            <i class="fas fa-clock"></i> Pendente
+                        </div>
+                    </div>
+                `).join('');
+            }
+        }
+
+        function removePendingImage(index) {
+            pendingImages.splice(index, 1);
+            renderPendingImages();
+        }
+
+        async function deleteFoto(fotoId) {
+            if (!confirm('Deseja realmente excluir esta foto?')) return;
+
+            try {
+                await API.deleteFoto(fotoId);
+                fotos = fotos.filter(f => f.id !== fotoId);
+                renderFotos();
+                showToast('Foto excluída!', 'success');
+            } catch (error) {
+                showToast('Erro ao excluir foto', 'error');
+            }
+        }
+
+        // Handle file selection
+        document.getElementById('fotoInput').addEventListener('change', (e) => {
+            const files = Array.from(e.target.files);
+            const totalImages = (fotos.length || 0) + pendingImages.length + files.length;
+
+            if (totalImages > 3) {
+                showToast('Máximo de 3 fotos por anúncio', 'error');
+                e.target.value = '';
+                return;
+            }
+
+            // Validate file sizes and types
+            const validFiles = files.filter(file => {
+                if (file.size > 5 * 1024 * 1024) {
+                    showToast(`Arquivo ${file.name} é muito grande (máx 5MB)`, 'error');
+                    return false;
+                }
+                if (!file.type.startsWith('image/')) {
+                    showToast(`Arquivo ${file.name} não é uma imagem`, 'error');
+                    return false;
+                }
+                return true;
+            });
+
+            if (isEdit && anuncioId) {
+                // If editing, upload immediately
+                uploadMultipleImages(validFiles);
+            } else {
+                // If creating, add to pending list
+                pendingImages.push(...validFiles);
+                renderPendingImages();
+            }
+
+            e.target.value = '';
+        });
+
+        async function uploadMultipleImages(files) {
+            for (const file of files) {
+                try {
+                    const result = await API.uploadFoto(anuncioId, file);
+                    fotos.push(result);
+                    renderFotos();
+                    showToast('Foto enviada!', 'success');
+                } catch (error) {
+                    showToast(`Erro ao enviar ${file.name}`, 'error');
+                }
+            }
+        }
+
+        async function uploadPendingImages(newAnuncioId) {
+            if (pendingImages.length === 0) return;
+
+            showLoading();
+            for (const file of pendingImages) {
+                try {
+                    await API.uploadFoto(newAnuncioId, file);
+                } catch (error) {
+                    console.error('Error uploading pending image:', error);
+                }
+            }
+            hideLoading();
         }
 
         document.getElementById('anuncioForm').addEventListener('submit', async (e) => {
@@ -144,11 +297,21 @@
                     anuncioData.id = parseInt(anuncioId);
                     await API.updateAnuncio(anuncioData);
                     showToast('Anúncio atualizado!', 'success');
+                    setTimeout(() => window.location.href = 'meus-anuncios.html', 1500);
                 } else {
-                    await API.createAnuncio(anuncioData);
-                    showToast('Anúncio criado!', 'success');
+                    const result = await API.createAnuncio(anuncioData);
+
+                    // Upload pending images if any
+                    if (pendingImages.length > 0) {
+                        showToast('Anúncio criado! Enviando fotos...', 'success');
+                        await uploadPendingImages(result.id);
+                        showToast('Anúncio criado com fotos!', 'success');
+                    } else {
+                        showToast('Anúncio criado!', 'success');
+                    }
+
+                    setTimeout(() => window.location.href = 'meus-anuncios.html', 1500);
                 }
-                setTimeout(() => window.location.href = 'meus-anuncios.html', 1500);
             } catch (error) {
                 showToast(error.message || 'Erro ao salvar anúncio', 'error');
             }

@@ -2,16 +2,12 @@ package unoeste.fipp.bomservico;
 
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 
-/**
- * Utility to generate BCrypt password hashes
- * Run this class to generate hashed passwords for database
- */
 public class PasswordHashGenerator {
     public static void main(String[] args) {
         BCryptPasswordEncoder encoder = new BCryptPasswordEncoder();
 
         // Generate hash for admin password
-        String adminPassword = "admin";
+        String adminPassword = "eddy123";
         String adminHash = encoder.encode(adminPassword);
         System.out.println("Password: " + adminPassword);
         System.out.println("BCrypt Hash: " + adminHash);

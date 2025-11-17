@@ -238,7 +238,7 @@ ALTER SEQUENCE public.interesse_int_id_seq OWNED BY public.interesse.int_id;
 
 CREATE TABLE public.usuario (
     usu_login character varying(16) NOT NULL,
-    usu_senha character varying(32) NOT NULL,
+    usu_senha character varying(100) NOT NULL,
     usu_nivel integer NOT NULL,
     usu_nome character varying(50) NOT NULL,
     usu_cpf character varying(14),

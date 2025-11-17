@@ -229,12 +229,24 @@ a:hover {
 .card-title {
     font-size: 1.25rem;
     margin-bottom: var(--spacing-sm);
-    color: var(--gray-900);
+    color: var(--gray-900) !important;
 }
 
 .card-text {
-    color: var(--gray-600);
+    color: var(--gray-600) !important;
     margin-bottom: var(--spacing-md);
+}
+
+.card h1, .card h2, .card h3, .card h4, .card h5, .card h6 {
+    color: var(--gray-900) !important;
+}
+
+.card p {
+    color: var(--gray-700) !important;
+}
+
+.card strong {
+    color: var(--gray-900) !important;
 }
 
 /* Glass Card Effect */
@@ -340,7 +352,7 @@ a:hover {
     display: block;
     margin-bottom: var(--spacing-sm);
     font-weight: 600;
-    color: var(--gray-700);
+    color: var(--gray-900) !important;
 }
 
 .form-control {
@@ -439,12 +451,13 @@ select.form-control {
     font-weight: 600;
     border-radius: var(--radius-full);
     background: var(--gray-200);
-    color: var(--gray-700);
+    color: var(--gray-800) !important;
 }
 
 .badge-primary {
-    background: rgba(99, 102, 241, 0.1);
-    color: var(--primary);
+    background: rgba(99, 102, 241, 0.15);
+    color: var(--primary-dark) !important;
+    border: 1px solid rgba(99, 102, 241, 0.3);
 }
 
 .badge-success {
@@ -741,10 +754,10 @@ select.form-control {
 
 .empty-state-title {
     font-size: 1.5rem;
-    color: var(--gray-600);
+    color: var(--gray-900) !important;
     margin-bottom: var(--spacing-sm);
 }
 
 .empty-state-text {
-    color: var(--gray-500);
+    color: var(--gray-700) !important;
 }

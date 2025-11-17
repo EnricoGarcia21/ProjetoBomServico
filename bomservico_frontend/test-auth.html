@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Authentication - BomServiço</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <section style="padding: var(--spacing-3xl) 0;">
+        <div class="container">
+            <div class="card card-glass" style="max-width: 600px; margin: 0 auto;">
+                <div class="card-header">
+                    <h3>🔍 Test Authentication Status</h3>
+                </div>
+                <div class="card-body">
+                    <h4>Current User Data:</h4>
+                    <pre id="userData" style="background: var(--gray-100); padding: var(--spacing-md); border-radius: var(--radius-md); overflow-x: auto;"></pre>
+
+                    <h4 style="margin-top: var(--spacing-lg);">Authentication Checks:</h4>
+                    <ul id="checks" style="list-style: none; padding: 0;"></ul>
+
+                    <div style="margin-top: var(--spacing-2xl);">
+                        <button onclick="testLogin('admin', 'admin')" class="btn btn-primary">Test Admin Login</button>
+                        <button onclick="testLogin('jorge', '123')" class="btn btn-secondary">Test Prestador Login</button>
+                        <button onclick="Auth.logout()" class="btn btn-danger">Logout</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <script src="js/utils.js"></script>
+    <script src="js/auth.js"></script>
+    <script src="js/api.js"></script>
+    <script>
+        function displayStatus() {
+            const user = Auth.getUser();
+            const token = Auth.getToken();
+
+            document.getElementById('userData').textContent = JSON.stringify({
+                user: user,
+                token: token ? token.substring(0, 50) + '...' : null,
+                isAuthenticated: Auth.isAuthenticated(),
+                isAdmin: Auth.isAdmin(),
+                isPrestador: Auth.isPrestador()
+            }, null, 2);
+
+            const checks = [
+                { label: 'Is Authenticated', value: Auth.isAuthenticated() },
+                { label: 'Is Admin (nivel === 1)', value: Auth.isAdmin() },
+                { label: 'Is Prestador (nivel === 0)', value: Auth.isPrestador() },
+                { label: 'User Nivel', value: user?.nivel },
+                { label: 'User Nivel Type', value: typeof user?.nivel }
+            ];
+
+            document.getElementById('checks').innerHTML = checks.map(check => `
+                <li style="padding: var(--spacing-sm); margin-bottom: var(--spacing-sm); background: ${check.value ? 'var(--success)' : 'var(--error)'}; color: white; border-radius: var(--radius-md);">
+                    ${check.label}: <strong>${check.value}</strong>
+                </li>
+            `).join('');
+        }
+
+        async function testLogin(login, senha) {
+            try {
+                const response = await API.login({ login, senha });
+                console.log('Login Response:', response);
+                Auth.login(response);
+                showToast(`Logged in as ${response.nome}`, 'success');
+                setTimeout(displayStatus, 500);
+            } catch (error) {
+                showToast('Login failed: ' + error.message, 'error');
+            }
+        }
+
+        displayStatus();
+    </script>
+</body>
+</html>

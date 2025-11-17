@@ -132,29 +132,43 @@ async function confirm(message) {
     return new Promise((resolve) => {
         const modal = document.createElement('div');
         modal.className = 'modal show';
+
+        // Create unique IDs for this confirmation
+        const confirmBtnId = 'confirm-btn-' + Date.now();
+        const cancelBtnId = 'cancel-btn-' + Date.now();
+
         modal.innerHTML = `
             <div class="modal-content">
                 <div class="modal-header">
                     <h4>Confirmação</h4>
                 </div>
                 <div class="modal-body">
-                    <p>${message}</p>
+                    <p style="white-space: pre-line;">${message}</p>
                 </div>
                 <div class="modal-footer">
-                    <button class="btn btn-outline" onclick="this.closest('.modal').remove(); document.body.style.overflow = '';">Cancelar</button>
-                    <button class="btn btn-primary" id="confirm-btn">Confirmar</button>
+                    <button class="btn btn-outline" id="${cancelBtnId}">Cancelar</button>
+                    <button class="btn btn-primary" id="${confirmBtnId}">Confirmar</button>
                 </div>
             </div>
         `;
         document.body.appendChild(modal);
         document.body.style.overflow = 'hidden';
 
-        document.getElementById('confirm-btn').onclick = () => {
+        // Confirm button handler
+        document.getElementById(confirmBtnId).onclick = () => {
             modal.remove();
             document.body.style.overflow = '';
             resolve(true);
         };
 
+        // Cancel button handler
+        document.getElementById(cancelBtnId).onclick = () => {
+            modal.remove();
+            document.body.style.overflow = '';
+            resolve(false);
+        };
+
+        // Click outside modal to cancel
         modal.onclick = (e) => {
             if (e.target === modal) {
                 modal.remove();
