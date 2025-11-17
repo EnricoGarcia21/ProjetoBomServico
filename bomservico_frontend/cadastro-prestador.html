@@ -100,34 +100,163 @@
     <script src="js/utils.js"></script>
     <script src="js/auth.js"></script>
     <script src="js/api.js"></script>
-    <script>
+        <script>
+    // ===============================================
+    // FUNÇÕES DE MÁSCARA
+    // ===============================================
+
+    // Função para máscara de CPF (000.000.000-00)
+    function Mascaracpf(cpf) {
+        cpf = cpf.replace(/\D/g, "");
+        cpf = cpf.substring(0, 11); 
+        cpf = cpf.replace(/(\d{3})(\d)/, "$1.$2");
+        cpf = cpf.replace(/(\d{3})(\d)/, "$1.$2");
+        cpf = cpf.replace(/(\d{3})(\d{1,2})$/, "$1-$2");
+        return cpf;
+    }
+
+    // Função para máscara de Telefone ((00) 0000-0000 ou (00) 00000-0000)
+    function MascaraTelefone(telefone) {
+        telefone = telefone.replace(/\D/g, "");
+        telefone = telefone.substring(0, 11);
+
+        telefone = telefone.replace(/^(\d{2})(\d)/g, "($1) $2");
+
+        if (telefone.length <= 14) { 
+            telefone = telefone.replace(/(\d{4})(\d)/, "$1-$2");
+        } else { 
+            telefone = telefone.replace(/(\d{5})(\d)/, "$1-$2");
+        }
+        return telefone;
+    }
+
+
+    // ===============================================
+    // FUNÇÃO DE VALIDAÇÃO DE CPF (DÍGITOS VERIFICADORES)
+    // ===============================================
+
+    /**
+     * Valida o CPF completo, incluindo o cálculo dos dígitos verificadores.
+     * Deve ser colocado aqui ou no arquivo js/utils.js
+     */
+    function isValidCPF(cpf) {
+        cpf = cpf.replace(/[^\d]/g, ''); // Remove caracteres não numéricos
+
+        if (cpf.length !== 11) return false;
+        // Rejeita sequências repetidas (Ex: 111.111.111-11)
+        if (/^(\d)\1+$/.test(cpf)) return false;
+
+        let sum = 0;
+        let remainder;
+
+        // Validação do Primeiro Dígito Verificador (10º dígito)
+        for (let i = 0; i < 9; i++) {
+            sum += parseInt(cpf.charAt(i)) * (10 - i);
+        }
+
+        remainder = (sum * 10) % 11;
+        if (remainder === 10 || remainder === 11) remainder = 0;
+        if (remainder !== parseInt(cpf.charAt(9))) return false;
+
+        sum = 0;
+
+        // Validação do Segundo Dígito Verificador (11º dígito)
+        for (let i = 0; i < 10; i++) {
+            sum += parseInt(cpf.charAt(i)) * (11 - i);
+        }
+
+        remainder = (sum * 10) % 11;
+        if (remainder === 10 || remainder === 11) remainder = 0;
+        if (remainder !== parseInt(cpf.charAt(10))) return false;
+
+        return true; 
+    }
+
+
+    // ===============================================
+    // EVENT LISTENERS E LÓGICA DE SUBMISSÃO
+    // ===============================================
+
+    document.addEventListener('DOMContentLoaded', () => {
+        
+        const cpfInput = document.getElementById('cpf');
+        const telefoneInput = document.getElementById('telefone');
+        
+        // Listener para Máscara de CPF
+        if (cpfInput) {
+            cpfInput.addEventListener('input', (e) => {
+                e.target.value = Mascaracpf(e.target.value);
+            });
+        }
+
+        // Listener para Máscara de Telefone/Celular
+        if (telefoneInput) {
+            telefoneInput.addEventListener('input', (e) => {
+                e.target.value = MascaraTelefone(e.target.value);
+            });
+        }
+        
+        // Listener para a submissão do formulário
         document.getElementById('cadastroForm').addEventListener('submit', async (e) => {
             e.preventDefault();
 
+            const dtNascimentoInput = document.getElementById('dtNascimento');
+            const cpfCampo = document.getElementById('cpf').value; // <-- OBTÉM o valor do CPF
+            
+            // 1. Validação de Campo de Data Vazio
+            if (!dtNascimentoInput.value) {
+                showToast('A data de nascimento é obrigatória.', 'error');
+                return;
+            }
+            
+            const dataNasc = new Date(dtNascimentoInput.value); 
+
+            // 2. Validação de Idade (Maior de 18 anos)
+            const dataMinima = new Date();
+            dataMinima.setFullYear(dataMinima.getFullYear() - 18);
+
+            if (dataNasc > dataMinima) {
+                showToast('Você deve ter no mínimo 18 anos para se cadastrar como prestador.', 'error');
+                return; // Impede a submissão
+            }
+            
+            // 3. Validação do CPF (Dígitos Verificadores)
+            if (!isValidCPF(cpfCampo)) {
+                showToast('O CPF digitado é inválido. Por favor, verifique.', 'error');
+                return; // Impede a submissão
+            }
+
+            // Criação do objeto de usuário após todas as validações passarem
             const usuario = {
                 login: document.getElementById('login').value,
                 senha: document.getElementById('senha').value,
                 nome: document.getElementById('nome').value,
-                cpf: document.getElementById('cpf').value,
-                dtNasc: document.getElementById('dtNascimento').value,
+                // Limpa CPF antes de enviar para a API
+                cpf: cpfCampo.replace(/\D/g, ""), 
+                dtNasc: dtNascimentoInput.value, 
                 email: document.getElementById('email').value,
-                telefone: document.getElementById('telefone').value,
+                // Limpa Telefone antes de enviar para a API
+                telefone: document.getElementById('telefone').value.replace(/\D/g, ""),
                 endereco: document.getElementById('endereco').value
             };
 
+            // 4. Validação de Senha (Mínimo 6 caracteres)
             if (usuario.senha.length < 6) {
                 showToast('A senha deve ter no mínimo 6 caracteres', 'error');
                 return;
             }
 
+            // 5. Chamada à API
             try {
-                await API.register(usuario);
+                // Supondo que 'API.register' é uma função definida em 'js/api.js'
+                await API.register(usuario); 
                 showToast('Cadastro realizado com sucesso!', 'success');
                 setTimeout(() => window.location.href = 'login.html', 1500);
             } catch (error) {
                 showToast(error.message || 'Erro ao cadastrar', 'error');
             }
         });
-    </script>
+    });
+</script>
 </body>
 </html>

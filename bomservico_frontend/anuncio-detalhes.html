@@ -58,68 +58,114 @@
     <script src="js/utils.js"></script>
     <script src="js/auth.js"></script>
     <script src="js/api.js"></script>
-    <script>
-        const anuncioId = getUrlParameter('id');
+   <script>
+    const anuncioId = getUrlParameter('id');
 
-        async function loadAnuncio() {
-            try {
-                const anuncio = await API.getAnuncioPublic(anuncioId);
+    // ===============================================
+    // FUNÇÃO DE MÁSCARA DE TELEFONE
+    // ===============================================
 
-                // Build photo gallery
-                let photoGallery = '';
-                if (anuncio.fotoList && anuncio.fotoList.length > 0) {
-                    photoGallery = `
-                        <div class="mb-3">
-                            <h3 style="color: white; margin-bottom: var(--spacing-md);"><i class="fas fa-images"></i> Fotos</h3>
-                            <div class="grid grid-cols-3" style="gap: var(--spacing-md);">
-                                ${anuncio.fotoList.map(foto => `
-                                    <img src="http://localhost:8080/${foto.file}" alt="Foto do serviço"
-                                         style="width: 100%; height: 200px; object-fit: cover; border-radius: var(--radius-md); cursor: pointer;"
-                                         onclick="window.open('http://localhost:8080/${foto.file}', '_blank')">
-                                `).join('')}
-                            </div>
+    // Função para máscara de Telefone ((00) 0000-0000 ou (00) 00000-0000)
+    function MascaraTelefone(telefone) {
+        telefone = telefone.replace(/\D/g, "");
+        telefone = telefone.substring(0, 11);
+
+        telefone = telefone.replace(/^(\d{2})(\d)/g, "($1) $2");
+
+        if (telefone.length <= 14) { 
+            telefone = telefone.replace(/(\d{4})(\d)/, "$1-$2");
+        } else { 
+            telefone = telefone.replace(/(\d{5})(\d)/, "$1-$2");
+        }
+        return telefone;
+    }
+
+    // ===============================================
+    // LÓGICA DE CARREGAMENTO DO ANÚNCIO
+    // ===============================================
+
+    async function loadAnuncio() {
+        try {
+            const anuncio = await API.getAnuncioPublic(anuncioId);
+            
+            // --- APLICA MÁSCARA NO TELEFONE DO PRESTADOR PARA EXIBIÇÃO ---
+            const telefonePrestadorFormatado = MascaraTelefone(anuncio.usuario?.telefone || 'N/A');
+
+            // Build photo gallery
+            let photoGallery = '';
+            if (anuncio.fotoList && anuncio.fotoList.length > 0) {
+                photoGallery = `
+                    <div class="mb-3">
+                        <h3 style="color: white; margin-bottom: var(--spacing-md);"><i class="fas fa-images"></i> Fotos</h3>
+                        <div class="grid grid-cols-3" style="gap: var(--spacing-md);">
+                            ${anuncio.fotoList.map(foto => `
+                                <img src="http://localhost:8080/${foto.file}" alt="Foto do serviço"
+                                    style="width: 100%; height: 200px; object-fit: cover; border-radius: var(--radius-md); cursor: pointer;"
+                                    onclick="window.open('http://localhost:8080/${foto.file}', '_blank')">
+                            `).join('')}
                         </div>
-                    `;
-                }
-
-                document.getElementById('anuncioDetails').innerHTML = `
-                    ${photoGallery}
-                    <h1>${anuncio.titulo}</h1>
-                    <p class="text-gray mb-2">${anuncio.descr || 'Sem descrição'}</p>
-                    <div class="d-flex flex-wrap gap-1 mb-2">
-                        ${anuncio.categoriaList ? anuncio.categoriaList.map(cat => `
-                            <span class="badge badge-primary"><i class="fas fa-${getCategoriaIcon(cat.nome)}"></i> ${cat.nome}</span>
-                        `).join('') : ''}
-                    </div>
-                    <div class="grid grid-cols-2 mt-3">
-                        <div><i class="fas fa-calendar"></i> <strong>Dias:</strong> ${anuncio.diasTrab}</div>
-                        <div><i class="fas fa-clock"></i> <strong>Horário:</strong> ${anuncio.horarioInicioDia} - ${anuncio.horarioFimDia}</div>
-                        <div><i class="fas fa-user"></i> <strong>Prestador:</strong> ${anuncio.usuario?.nome || 'N/A'}</div>
-                        <div><i class="fas fa-phone"></i> <strong>Telefone:</strong> ${anuncio.usuario?.telefone || 'N/A'}</div>
                     </div>
                 `;
-            } catch (error) {
-                showToast('Erro ao carregar anúncio', 'error');
             }
+
+            document.getElementById('anuncioDetails').innerHTML = `
+                ${photoGallery}
+                <h1>${anuncio.titulo}</h1>
+                <p class="text-gray mb-2">${anuncio.descr || 'Sem descrição'}</p>
+                <div class="d-flex flex-wrap gap-1 mb-2">
+                    ${anuncio.categoriaList ? anuncio.categoriaList.map(cat => `
+                        <span class="badge badge-primary"><i class="fas fa-${getCategoriaIcon(cat.nome)}"></i> ${cat.nome}</span>
+                    `).join('') : ''}
+                </div>
+                <div class="grid grid-cols-2 mt-3">
+                    <div><i class="fas fa-calendar"></i> <strong>Dias:</strong> ${anuncio.diasTrab}</div>
+                    <div><i class="fas fa-clock"></i> <strong>Horário:</strong> ${anuncio.horarioInicioDia} - ${anuncio.horarioFimDia}</div>
+                    <div><i class="fas fa-user"></i> <strong>Prestador:</strong> ${anuncio.usuario?.nome || 'N/A'}</div>
+                    <div><i class="fas fa-phone"></i> <strong>Telefone:</strong> ${telefonePrestadorFormatado}</div>
+                </div>
+            `;
+        } catch (error) {
+            showToast('Erro ao carregar anúncio', 'error');
         }
+    }
 
-        document.getElementById('contactForm').addEventListener('submit', async (e) => {
-            e.preventDefault();
-            try {
-                await API.sendInteresse(anuncioId, {
-                    nome: document.getElementById('nome').value,
-                    fone: document.getElementById('fone').value,
-                    email: document.getElementById('email').value,
-                    mensagem: document.getElementById('mensagem').value
-                });
-                showToast('Mensagem enviada com sucesso!', 'success');
-                document.getElementById('contactForm').reset();
-            } catch (error) {
-                showToast(error.message || 'Erro ao enviar mensagem', 'error');
-            }
-        });
+    // ===============================================
+    // EVENT LISTENERS E LÓGICA DE CONTATO
+    // ===============================================
 
-        loadAnuncio();
-    </script>
+    // Adiciona o Event Listener para a máscara de telefone no campo 'fone' do formulário de contato
+    document.addEventListener('DOMContentLoaded', () => {
+        const foneInput = document.getElementById('fone');
+        if (foneInput) {
+            foneInput.addEventListener('input', (e) => {
+                e.target.value = MascaraTelefone(e.target.value);
+            });
+        }
+    });
+
+    document.getElementById('contactForm').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        
+        const foneCampo = document.getElementById('fone').value;
+        
+        // Limpar a máscara antes de enviar o telefone para a API
+        const foneLimpo = foneCampo.replace(/\D/g, ""); 
+        
+        try {
+            await API.sendInteresse(anuncioId, {
+                nome: document.getElementById('nome').value,
+                fone: foneLimpo, // Enviando o telefone limpo
+                email: document.getElementById('email').value,
+                mensagem: document.getElementById('mensagem').value
+            });
+            showToast('Mensagem enviada com sucesso!', 'success');
+            document.getElementById('contactForm').reset();
+        } catch (error) {
+            showToast(error.message || 'Erro ao enviar mensagem', 'error');
+        }
+    });
+
+    loadAnuncio();
+</script>
 </body>
 </html>
